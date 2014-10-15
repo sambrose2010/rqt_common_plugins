@@ -47,6 +47,7 @@ from .message_loader_thread import MessageLoaderThread
 from .player import Player
 from .recorder import Recorder
 from .timeline_menu import TimelinePopupMenu
+from .message_creation import MessageCreation
 
 
 class BagTimeline(QGraphicsScene):
@@ -139,6 +140,8 @@ class BagTimeline(QGraphicsScene):
         for frame in self._views:
             if frame.parent():
                 self._context.remove_widget(frame)
+            if self.popups.has_key(frame.objectName()):
+                self.popups[frame.objectName()] = None
 
     # Bag Management and access
     def add_bag(self, bag):
@@ -174,6 +177,33 @@ class BagTimeline(QGraphicsScene):
                     del self._timeline_frame.index_cache[topic]
 
             self._timeline_frame.index_cache_cv.notify()
+
+    def add_message_to_bag(self, bag, topic, msg, timestamp):
+        if bag is None or msg is None:
+            qWarning('There is no message to write')
+            return
+
+        bag.write(topic, msg, timestamp)
+
+        if not self._playhead_positions_cvs.has_key(topic):
+            self._playhead_positions_cvs[topic] = threading.Condition()
+            self._messages_cvs[topic] = threading.Condition()
+            self._message_loaders[topic] = MessageLoaderThread(self, topic)
+
+        self._timeline_frame.topics = self._get_topics()
+        self._timeline_frame._topics_by_datatype = self._get_topics_by_datatype()
+        # If this is the first bag, reset the timeline
+        if self._timeline_frame._stamp_left is None:
+            self._timeline_frame.reset_timeline()
+
+        # Invalidate entire index cache for all topics in this bag
+        with self._timeline_frame.index_cache_cv:
+            self._timeline_frame.invalidated_caches.add(topic)
+            if topic in self._timeline_frame.index_cache:
+                del self._timeline_frame.index_cache[topic]
+
+            self._timeline_frame.index_cache_cv.notify()
+
 
     #TODO Rethink API and if these need to be visible
     def _get_start_stamp(self):
@@ -565,6 +595,14 @@ class BagTimeline(QGraphicsScene):
 
     def toggle_play_all(self):
         self.play_all = not self.play_all
+
+    def add_message(self):
+        self.messageCreation = MessageCreation(self)
+        self.messageCreation.messageDefined.connect(self.on_message_defined)
+
+    def on_message_defined(self):
+        if len(self._bags)>0 and self._bags[0].mode == 'w':
+            self.add_message_to_bag(self._bags[0], self.messageCreation.topic_name, self.messageCreation.msg, self._timeline_frame.playhead)
 
     ### Playing
     def on_idle(self):

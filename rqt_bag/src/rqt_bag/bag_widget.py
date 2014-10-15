@@ -70,6 +70,8 @@ class BagWidget(QWidget):
 
         self.setObjectName('BagWidget')
 
+        self.outbag = None # Bag containing the data the user
+
         self._timeline = BagTimeline(context, publish_clock)
         self.graphics_view.setScene(self._timeline)
 
@@ -276,7 +278,18 @@ class BagWidget(QWidget):
         #self.progress_bar.setFormat("Loading %s" % filename)
         #self.progress_bar.setTextVisible(True)
 
-        bag = rosbag.Bag(filename)
+        # TODO : ask the user if they want to work on a copy (just like Audacity)
+        with rosbag.Bag(filename) as inbag:
+            inbagbackup = rosbag.Bag('/tmp/'+filename.split('/')[-1], 'w')
+            for topic, msg, t in inbag.read_messages():
+                inbagbackup.write(topic, msg, t)
+            inbagbackup.close()
+
+        inbag = rosbag.Bag('/tmp/'+filename.split('/')[-1])
+
+        if self.outbag is None:
+            self.outbag = rosbag.Bag('/tmp/rosbag_output.bag', 'w')
+
         self.play_button.setEnabled(True)
         self.thumbs_button.setEnabled(True)
         self.zoom_in_button.setEnabled(True)
@@ -290,7 +303,8 @@ class BagWidget(QWidget):
         self.end_button.setEnabled(True)
         self.save_button.setEnabled(True)
         self.record_button.setEnabled(False)
-        self._timeline.add_bag(bag)
+        self._timeline.add_bag(self.outbag)
+        self._timeline.add_bag(inbag)
         qWarning("Done loading %s" % filename )
         # put the progress bar back the way it was
         self.set_status_text.emit("")

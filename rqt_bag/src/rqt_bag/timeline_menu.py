@@ -206,6 +206,12 @@ class TimelinePopupMenu(QMenu):
             self._publish_all = None
             self._publish_none = None
 
+        self.addSeparator()
+
+        # create add topic
+        if menu_topic is None:
+            self._message_add_action = self.addAction('Add message')
+
 
 
         action = self.exec_(event.globalPos())
@@ -271,5 +277,7 @@ class TimelinePopupMenu(QMenu):
                 self.timeline.stop_publishing(topic)
             else:
                 self.timeline.start_publishing(topic)
+        elif action == self._message_add_action:
+            self.timeline.add_message()
         else:
             raise Exception('Unknown action in TimelinePopupMenu.process')

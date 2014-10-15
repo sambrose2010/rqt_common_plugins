@@ -99,6 +99,9 @@ class BagTimeline(QGraphicsScene):
         self._views = []
         self._listeners = {}
 
+        # Message deletion buffer
+        self.deleted=[]
+
         # Initialize scene
         # the timeline renderer fixes use of black pens and fills, so ensure we fix white here for contrast.
         # otherwise a dark qt theme will default it to black and the frame render pen will be unreadable
@@ -204,6 +207,22 @@ class BagTimeline(QGraphicsScene):
 
             self._timeline_frame.index_cache_cv.notify()
 
+    def remove_message(self, topic, entry):
+
+        self.deleted.append(entry)
+
+        # If this is the first bag, reset the timeline
+        if self._timeline_frame._stamp_left is None:
+            self._timeline_frame.reset_timeline()
+
+        # Invalidate entire index cache for all topics in this bag
+        with self._timeline_frame.index_cache_cv:
+            self._timeline_frame.invalidated_caches.add(topic)
+            if topic in self._timeline_frame.index_cache:
+                del self._timeline_frame.index_cache[topic]
+
+            self._timeline_frame.index_cache_cv.notify()
+
 
     #TODO Rethink API and if these need to be visible
     def _get_start_stamp(self):
@@ -291,6 +310,8 @@ class BagTimeline(QGraphicsScene):
                 bag_entries.append(b._get_entries(connections, start_stamp, end_stamp))
 
             for entry, _ in bag._mergesort(bag_entries, key=lambda entry: entry.time):
+                if entry in self.deleted:
+                    continue
                 yield entry
 
     def get_entries_with_bags(self, topic, start_stamp, end_stamp):
@@ -321,6 +342,8 @@ class BagTimeline(QGraphicsScene):
                 bag_entries.append(it)
 
             for entry, it in bag._mergesort(bag_entries, key=lambda entry: entry.time):
+                if entry in self.deleted:
+                    continue
                 yield bag_by_iter[it], entry
 
     def get_entry(self, t, topic):
@@ -825,6 +848,8 @@ class BagTimeline(QGraphicsScene):
 
     def navigate_stop(self):
         self.play_speed = 0.0
+        self.last_frame = None
+        self.last_playhead = None
         self._play_timer.stop()
 
     def navigate_previous(self):

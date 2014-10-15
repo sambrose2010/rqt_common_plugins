@@ -102,8 +102,16 @@ class MessageCreation(QWidget):
         self.definition_hlayout.addWidget(self.msg_name_widget)
         self.definition_widget.setLayout(self.definition_hlayout)
 
-        # Middle widget 1: Import data from current state
+        # Middle widget 1: Import data from current state and delete the current message
+        self.utils_widget = QWidget(self)
+
         self.import_button = QPushButton("Import from current position", self)
+        self.delete_button = QPushButton("Delete the current message", self)
+
+        self.utils_hlayout = QHBoxLayout(self)
+        self.utils_hlayout.addWidget(self.import_button)
+        self.utils_hlayout.addWidget(self.delete_button)
+        self.utils_widget.setLayout(self.utils_hlayout)
 
         # Middle widget 2: message composition
         self.message_tree = MessageTree(self)
@@ -114,13 +122,16 @@ class MessageCreation(QWidget):
         # Integrate all the widgets and the top layer widget into the main layout
         self.main_vlayout = QVBoxLayout(self)
         self.main_vlayout.addWidget(self.definition_widget)
-        self.main_vlayout.addWidget(self.import_button)
+        self.main_vlayout.addWidget(self.utils_widget)
         self.main_vlayout.addWidget(self.message_tree)
         self.main_vlayout.addWidget(self.add_button)
         self.setLayout(self.main_vlayout)
 
-
         ## GUI ELEMENT SETUP
+
+        # Import button
+        self.delete_button.clicked.connect(self.onDeleteButtonClicked)
+        self.delete_button.setEnabled(True)
 
         # Import button
         self.import_button.clicked.connect(self.onImportButtonClicked)
@@ -177,7 +188,6 @@ class MessageCreation(QWidget):
             self.msg_name_widget.setEnabled(False)
         self.update()
 
-
     def _handle_topic_composition(self):
         if self.topic_composition_widget.text() in self.topic_list:
             qWarning("This will not create a new topic but use the already created topic with th same name")
@@ -190,6 +200,13 @@ class MessageCreation(QWidget):
         bag, entry = self.timeline.get_entry(self.timeline._timeline_frame.playhead, self.topic_name)
         msg = bag._read_message(entry.position)
         self.message_tree.set_message(msg[1])
+
+    def onDeleteButtonClicked(self):
+        if self.topic_name is None:
+            qWarning("No topic selected")
+            return
+        bag, entry = self.timeline.get_entry(self.timeline._timeline_frame.playhead, self.topic_name)
+        self.timeline.remove_message(self.topic_name, entry)
 
     def onAddButtonClicked(self):
         if self.topic_name == "":

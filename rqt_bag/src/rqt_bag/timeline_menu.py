@@ -99,7 +99,6 @@ class TimelinePopupMenu(QMenu):
         self.parent = timeline
         self.timeline = timeline
 
-
         if menu_topic is not None:
             self.setTitle(menu_topic)
             self._menu_topic = menu_topic
@@ -210,9 +209,7 @@ class TimelinePopupMenu(QMenu):
 
         # create add topic
         if menu_topic is None:
-            self._message_add_action = self.addAction('Add message')
-
-
+            self._message_add_action = self.addAction('Message management')
 
         action = self.exec_(event.globalPos())
         if action is not None and action != 0:
@@ -266,7 +263,6 @@ class TimelinePopupMenu(QMenu):
             # make popup visible
             frame = self.timeline.popups[popup_name]
             frame.show(self.timeline.get_context())
-
         elif action in self._publish_actions:
             if self._menu_topic is None:
                 topic = action.text()

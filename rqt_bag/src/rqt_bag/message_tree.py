@@ -203,7 +203,6 @@ class MessageTree(QTreeWidget):
             inputWidget.clicked.connect(lambda: self.elementAdditionRequired(item, parent, path, name, obj, obj_type))
             self.setItemWidget(item, 1, inputWidget)
 
-
         for subobj_name, subobj in subobjs:
             if subobj is None:
                 continue

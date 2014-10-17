@@ -71,6 +71,7 @@ class BagWidget(QWidget):
         self.setObjectName('BagWidget')
 
         self.outbag = None # Bag containing the data the user
+        self.filename = None
 
         self._timeline = BagTimeline(context, publish_clock)
         self.graphics_view.setScene(self._timeline)
@@ -267,6 +268,7 @@ class BagWidget(QWidget):
 
     def load_bag(self, filename):
         qWarning("Loading %s" % filename)
+        self.filename = filename
 
         # QProgressBar can EITHER: show text or show a bouncing loading bar,
         #  but apparently the text is hidden when the bounding loading bar is
@@ -332,6 +334,10 @@ class BagWidget(QWidget):
         try:
             # Background Process Status
             self.progress_bar.setValue(self._timeline.background_progress)
+
+            # Used file name
+            self.file_label.setText(self.filename)
+            self.file_label.setToolTip(self.filename)
 
             # Raw timestamp
             self.stamp_label.setText('%.3fs' % self._timeline._timeline_frame.playhead.to_sec())
